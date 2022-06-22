@@ -49,6 +49,10 @@ func main() {
 	// Handle the /shutdown endpoint which should gracefully shut down the
 	// service by canceling the context.
 	shutdownFunc := func(w http.ResponseWriter, r *http.Request) {
+		if !strings.EqualFold(r.Method, http.MethodPost) {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		if _, err := w.Write([]byte("Shutting down\n")); err != nil {
 			log.Printf("Error writing response: %s", err)
 		}

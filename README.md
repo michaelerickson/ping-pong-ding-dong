@@ -52,7 +52,7 @@ The program exports the following endpoints.
 - `GET /`: display the mode and various information about the service
 - `PUT /`: send a [JSON encoded message to the service](#message-format) 
 - `GET /health`: JSON encoded health check
-- `PUT /shutdown`: cleanly shutdown the service
+- `POST /shutdown`: cleanly shutdown the service
 
 # Message Format
 
