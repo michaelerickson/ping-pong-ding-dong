@@ -2,16 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 )
-
-// serviceStatus represents the health of the service
-type serviceStatus struct {
-	Status string
-}
 
 // serviceMsg defines the types of messages we pass around
 type serviceMsg struct {
@@ -61,7 +57,9 @@ func main() {
 
 	// Add handlers to the mux
 	shutdown := http.HandlerFunc(shutdownFunc)
+	health := http.HandlerFunc(healthCheckHandler)
 	m.Handle("/shutdown", loggingMiddleware(shutdown))
+	m.Handle("/health", loggingMiddleware(health))
 
 	// Launch the server in a go routing. This way the main thread can listen
 	// for the context being canceled and gracefully shut things down.
@@ -97,6 +95,28 @@ func validMode(m string) bool {
 func getModes() []string {
 	modes := []string{"ping", "pong", "ding", "dong"}
 	return modes
+}
+
+// serviceStatus represents the health of our little service
+type serviceStatus struct {
+	Status string
+}
+
+// healthCheckHandler handles requests to `/health`
+func healthCheckHandler(w http.ResponseWriter, _ *http.Request) {
+	status := serviceStatus{Status: "OK"}
+	response, err := json.Marshal(status)
+	if err != nil {
+		log.Printf("JSON error: %s", err)
+		http.Error(w, "JSON error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(response)
+	if err != nil {
+		log.Printf("Error writing response: %s", err)
+	}
 }
 
 // loggingMiddleware logs all requests to the service
