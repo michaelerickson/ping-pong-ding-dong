@@ -13,6 +13,42 @@ metadata:
 data:
   http_port: "8080"
   namespace: "default"
+  ping_port: "30001"
+  pong_port: "30002"
+
+---
+# Ping Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping
+  labels:
+    app: ping
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      nodePort: 30001
+      protocol: TCP
+  selector:
+    app: ping
+
+---
+# Pong Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pong
+  labels:
+    app: pong
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      nodePort: 30002
+      protocol: TCP
+  selector:
+    app: pong
 
 ---
 # Deployment for the ping service
@@ -56,6 +92,16 @@ spec:
                 configMapKeyRef:
                   name: dev
                   key: namespace
+            - name: PING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ping_port
+            - name: PONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: pong_port
 
       imagePullSecrets:
         - name: ghcr.io
@@ -102,6 +148,16 @@ spec:
                 configMapKeyRef:
                   name: dev
                   key: namespace
+            - name: PING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ping_port
+            - name: PONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: pong_port
 
       imagePullSecrets:
         - name: ghcr.io
