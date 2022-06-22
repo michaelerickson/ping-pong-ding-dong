@@ -84,6 +84,23 @@ func main() {
 		}
 	}()
 
+	// If in `ping` mode, try and bootstrap things
+	if strings.EqualFold(mode, "ping") {
+		bootStrapCount := 0
+		bootStrapped := false
+		for bootStrapped != true {
+			go func() {
+				log.Printf("ping bootstrapping %d", bootStrapCount)
+				resp, err := sendMsg("ping", pongSvc)
+				if err == nil && (resp.StatusCode >= 200) && (resp.StatusCode < 400) {
+					log.Println("bootstrapping complete")
+					bootStrapped = true
+				}
+			}()
+			time.Sleep(4 * time.Second)
+			bootStrapCount++
+		}
+	}
 	// Listen for the canceled context and shut things down cleanly
 	select {
 	case <-ctx.Done():
@@ -189,8 +206,11 @@ func postRoot(w http.ResponseWriter, r *http.Request) {
 		log.Println("Mode is not set properly, doing nothing...")
 		return
 	}
-
-	go sendMsg(msg, url)
+	// Add a slight pause before sending
+	time.Sleep(2 * time.Second)
+	go func() {
+		_, _ = sendMsg(msg, url)
+	}()
 }
 
 // healthCheckHandler handles requests to `/health`
@@ -268,7 +288,7 @@ func resolveServices() {
 }
 
 // sendMsg sends a message to a target service
-func sendMsg(msg string, url string) {
+func sendMsg(msg string, url string) (*http.Response, error) {
 	msgTx := serviceMsg{Msg: msg}
 	jsonBody, err := json.Marshal(msgTx)
 	if err != nil {
@@ -278,17 +298,11 @@ func sendMsg(msg string, url string) {
 	req, err := http.NewRequest(http.MethodPost, url, bodyReader)
 	if err != nil {
 		log.Printf("Error making request: %s", err)
-		return
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
-
-	// Add a slight pause before sending
-	time.Sleep(4 * time.Second)
-	_, err = client.Do(req)
-	if err != nil {
-		log.Printf("Error posting request: %s", err)
-	}
+	return client.Do(req)
 }
