@@ -97,20 +97,6 @@ type serviceStatus struct {
 	Status string
 }
 
-// shutdownHandler handles posts to `/shutdown`
-func shutdownHandler(cancel context.CancelFunc) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.EqualFold(r.Method, http.MethodPost) {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		if _, err := w.Write([]byte("Shutting down\n")); err != nil {
-			log.Printf("Error writing response: %s", err)
-		}
-		cancel()
-	}
-}
-
 // healthCheckHandler handles requests to `/health`
 func healthCheckHandler(w http.ResponseWriter, _ *http.Request) {
 	status := serviceStatus{Status: "OK"}
@@ -125,6 +111,20 @@ func healthCheckHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err = w.Write(response)
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
+	}
+}
+
+// shutdownHandler handles posts to `/shutdown`
+func shutdownHandler(cancel context.CancelFunc) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !strings.EqualFold(r.Method, http.MethodPost) {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if _, err := w.Write([]byte("Shutting down\n")); err != nil {
+			log.Printf("Error writing response: %s", err)
+		}
+		cancel()
 	}
 }
 
