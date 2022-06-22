@@ -59,3 +59,49 @@ spec:
 
       imagePullSecrets:
         - name: ghcr.io
+
+---
+# Deployment for the pong service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pong-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pong
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 300
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: pong
+    spec:
+      containers:
+        - name: ping-pong-ding-dong
+          image: "ghcr.io/michaelerickson/ping-pong-ding-dong:7e6c97f236"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PPDD_MODE
+              value: pong
+            - name: HTTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: http_port
+            - name: NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: namespace
+
+      imagePullSecrets:
+        - name: ghcr.io
