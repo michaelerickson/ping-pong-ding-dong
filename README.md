@@ -42,8 +42,27 @@ it to play around with service mesh, gRPC, observability tools, etc.
 The program accepts parameters via various environment variables.
 
 - `PPDD_MODE`: required, sets the type of service
-- `HTTP_PORT`: optional, will default to `8080` but useful to set if testing 
-  in a non-Kubernetes environment
+- `HTTP_PORT`: (_optional_ `8080`) but useful to set if testing in a
+   non-Kubernetes environment
+- `NAMESPACE`: (_optional_ `default`) Kubernetes namespace (set to `localhost`
+   if testing locally)
+- `PING_SVC`: (_optional_ `ping`)
+- `PING_PORT`: (_optional_ `8080`)
+- `PONG_SVC`: (_optional_ `pong`)
+- `PONG_PORT`: (_optional_ `8080`)
+
+Inside a cluster, the services will find each other via:
+
+```text
+ {PING_SVC}.{NAMESPACE}.svc.cluster.local
+```
+
+If `NAMESPACE == localhost` then we assume you are just running the binaries
+locally in different processes so the services will find each other via:
+
+```text
+  localhost:{PING_PORT}
+```
 
 # REST Interface
 
@@ -70,6 +89,7 @@ Where `<string>` is one of; `ping`, `pong`, `ding`, or `dong`.
 
 ## Manual Tests
 
+### Single Mode
 ```shell
 # Start the program in a mode of your choice
 PPDD_MODE=dong HTTP_PORT=8989 go run .
@@ -88,6 +108,26 @@ curl -v -X POST localhost:8989/ \
 
 curl -X POST localhost:8989/shutdown
 # Shutting down
+```
+
+### Ping and Pong
+
+```shell
+# Terminal 1
+PPDD_MODE=ping \
+  HTTP_PORT=8080 \
+  NAMESPACE=localhost \
+  PING_PORT=8080 \
+  PONG_PORT=8081 \
+  go run .
+
+# Terminal 2
+PPDD_MODE=pong \
+  HTTP_PORT=8081 \
+  NAMESPACE=localhost \
+  PING_PORT=8080 \
+  PONG_PORT=8081 \
+  go run .
 ```
 
 ## Unit Tests

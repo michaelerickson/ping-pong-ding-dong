@@ -23,8 +23,11 @@ type serviceMsg struct {
 	Msg string
 }
 
+// Various global parameters configured by environment variables.
 // mode indicates the mode we are running in
 var mode string
+var pingSvc string
+var pongSvc string
 
 // main starts the service and listens for requests
 func main() {
@@ -45,8 +48,12 @@ func main() {
 	if httpPort == "" {
 		httpPort = "8080"
 	}
-
 	log.Printf("Running in mode: %s on port %s", mode, httpPort)
+
+	resolveServices()
+	log.Printf("Services resolved to:\n")
+	log.Printf("  ping: %s\n", pingSvc)
+	log.Printf("  pong: %s\n", pongSvc)
 
 	m := http.NewServeMux()
 	s := http.Server{Addr: ":" + httpPort, Handler: m}
@@ -211,4 +218,39 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		log.Printf("%s %s", r.Method, r.RequestURI)
 		next.ServeHTTP(w, r)
 	})
+}
+
+// resolveServices uses environment variables to compute the URLs of
+// the services
+func resolveServices() {
+	namespace := os.Getenv("NAMESPACE")
+	pingName := os.Getenv("PING_SVC")
+	pingPort := os.Getenv("PING_PORT")
+	pongName := os.Getenv("PONG_SVC")
+	pongPort := os.Getenv("PONG_PORT")
+
+	// Set defaults
+	if pingName == "" {
+		pingName = "ping"
+	}
+	if pingPort == "" {
+		pingPort = "8080"
+	}
+
+	if pongName == "" {
+		pongName = "pong"
+	}
+	if pongPort == "" {
+		pongPort = "8080"
+	}
+
+	if strings.EqualFold(namespace, "localhost") {
+		pingSvc = fmt.Sprintf("localhost:%s", pingPort)
+		pongSvc = fmt.Sprintf("localhost:%s", pongPort)
+		return
+	}
+	pingSvc = fmt.Sprintf("%s.%s.svc.cluster.local:%s",
+		pingName, namespace, pingPort)
+	pongSvc = fmt.Sprintf("%s.%s.svc.cluster.local:%s",
+		pongName, namespace, pongPort)
 }
