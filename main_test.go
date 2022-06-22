@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -73,5 +74,33 @@ func TestHealthCheckHandler(t *testing.T) {
 	}
 	if !strings.EqualFold(status.Status, "OK") {
 		t.Fatalf("Expected status OK, got %s", status.Status)
+	}
+}
+
+// TestShutdownMethod ensures that only a POST is accepted
+func TestShutdownMethod(t *testing.T) {
+	var tests = []struct {
+		method string
+		expect int
+	}{
+		{method: http.MethodGet, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodHead, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodPost, expect: http.StatusOK},
+		{method: http.MethodPut, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodDelete, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodPatch, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodOptions, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodTrace, expect: http.StatusMethodNotAllowed},
+	}
+	_, cancel := context.WithCancel(context.Background())
+	shutdownFunc := shutdownHandler(cancel)
+	shutdown := http.HandlerFunc(shutdownFunc)
+	for _, test := range tests {
+		r := httptest.NewRequest(test.method, "/shutdown", nil)
+		w := httptest.NewRecorder()
+		shutdown(w, r)
+		if w.Code != test.expect {
+			t.Fatalf("Method %s expected %d got %d", test.method, test.expect, w.Code)
+		}
 	}
 }
