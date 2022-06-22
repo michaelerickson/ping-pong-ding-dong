@@ -3,9 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -51,10 +55,12 @@ func main() {
 	shutdownFunc := shutdownHandler(cancel)
 
 	// Add handlers to the mux
-	shutdown := http.HandlerFunc(shutdownFunc)
+	root := http.HandlerFunc(rootHandler)
 	health := http.HandlerFunc(healthCheckHandler)
-	m.Handle("/shutdown", loggingMiddleware(shutdown))
+	shutdown := http.HandlerFunc(shutdownFunc)
+	m.Handle("/", loggingMiddleware(root))
 	m.Handle("/health", loggingMiddleware(health))
+	m.Handle("/shutdown", loggingMiddleware(shutdown))
 
 	// Launch the server in a go routing. This way the main thread can listen
 	// for the context being canceled and gracefully shut things down.
@@ -95,6 +101,46 @@ func getModes() []string {
 // serviceStatus represents the health of our little service
 type serviceStatus struct {
 	Status string
+}
+
+// rootHandler deals with requests to `/`
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	if strings.EqualFold(r.Method, http.MethodGet) {
+		getRoot(w, r)
+	} else {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// getRoot handles GET requests to `/`
+func getRoot(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	srvAddr := ctx.Value(http.LocalAddrContextKey).(net.Addr)
+	response := fmt.Sprintf("Hello from: %s:\n", srvAddr)
+	response += fmt.Sprintf("  mode: %s\n", mode)
+	response += fmt.Sprintf("  operating system: %s\n", runtime.GOOS)
+	response += fmt.Sprintf("  architecture: %s\n", runtime.GOARCH)
+	response += fmt.Sprintf("  number of CPUs: %d\n", runtime.NumCPU())
+	if hostname, err := os.Hostname(); err != nil {
+		response += "  hostname: unknown\n"
+	} else {
+		response += fmt.Sprintf("  hostname: %s\n", hostname)
+	}
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	mBytes := float64(memStats.Sys) / (1 << 20)
+	response += fmt.Sprintf("  memory MiB: %f\n", mBytes)
+	env := os.Environ()
+	sort.Strings(env)
+	response += "Environment:\n"
+	for _, e := range env {
+		response += fmt.Sprintf("  %s\n", e)
+	}
+	response += "\n\n"
+	_, err := w.Write([]byte(response))
+	if err != nil {
+		log.Printf("Error writing response: %s", err)
+	}
 }
 
 // healthCheckHandler handles requests to `/health`
