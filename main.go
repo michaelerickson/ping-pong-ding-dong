@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -31,9 +33,52 @@ func main() {
 		mode = m
 	}
 	if !validMode(mode) {
-		log.Fatalf("Unknown mode: %s", mode)
+		log.Fatalf("Unknown mode: %s, check PPDD_MODE", mode)
 	}
-	log.Printf("Running in mode: %s", mode)
+
+	httpPort := os.Getenv("HTTP_PORT")
+	if httpPort == "" {
+		httpPort = "8080"
+	}
+
+	log.Printf("Running in mode: %s on port %s", mode, httpPort)
+
+	m := http.NewServeMux()
+	s := http.Server{Addr: ":" + httpPort, Handler: m}
+
+	// Establish a context so we can shut things down cleanly
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle the /shutdown endpoint which should gracefully shut down the
+	// service by canceling the context.
+	shutdownFunc := func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write([]byte("Shutting down\n")); err != nil {
+			log.Printf("Error writing response: %s", err)
+		}
+		cancel()
+	}
+
+	// Add handlers to the mux
+	shutdown := http.HandlerFunc(shutdownFunc)
+	m.Handle("/shutdown", shutdown)
+
+	// Launch the server in a go routing. This way the main thread can listen
+	// for the context being canceled and gracefully shut things down.
+	go func() {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Error starting server: %s", err)
+		}
+	}()
+
+	// Listen for the canceled context and shut things down cleanly
+	select {
+	case <-ctx.Done():
+		if err := s.Shutdown(context.Background()); err != nil {
+			log.Fatalf("Error shutting down server: %s", err)
+		}
+	}
+	log.Println("Application finished")
 }
 
 // validMode determines if the mode is one that we support
