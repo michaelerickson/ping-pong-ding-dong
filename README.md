@@ -138,3 +138,43 @@ go test -v -cover -coverprofile=c.out .
 go tool cover -html=c.out
 
 ```
+
+
+# Kubernetes
+
+There is a [sample YAML file](./k8s/ppdd.yml) that uses the following K8s
+features:
+
+- ConfigMap
+- Secret
+- Service
+- Deployment
+
+The secret is used to access GitHub's private container registry. You should
+follow the instructions on GitHub to create a Personal Access Token (PAT) with
+read access to the registry. Then create the K8s secret as below:
+
+```shell
+kubectl create secret docker-registry ghcr.io \
+  --docker-server=https://ghcr.io/v1/ \
+  --docker-username=michaelerickson \
+  --docker-email=erickson.michael@gmail.com \
+  --docker-password=ghp_Wxxx
+```
+
+This will be references in a Pod as:
+
+Use the secret in a Pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: private-reg
+spec:
+  containers:
+    - name: private-reg-container
+      image: private-image:latest
+  imagePullSecrets:
+    - name: ghcr.io   # <--- match name of secret you created above ---
+```
