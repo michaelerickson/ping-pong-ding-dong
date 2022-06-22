@@ -47,6 +47,8 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
+
+      - name: Check go version
         run: go version
 
       - name: Checkout code
