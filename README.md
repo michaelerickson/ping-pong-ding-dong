@@ -68,6 +68,29 @@ Where `<string>` is one of; `ping`, `pong`, `ding`, or `dong`.
 
 # Testing
 
+## Manual Tests
+
+```shell
+# Start the program in a mode of your choice
+PPDD_MODE=dong HTTP_PORT=8989 go run .
+
+# In another terminal, run commands
+curl localhost:8989/health
+# {"Status":"OK"}
+curl localhost:8989/
+# Hello from: 127.0.0.1:8989:
+#   mode: dong
+#   operating system: darwin
+# ...
+curl -v -X POST localhost:8989/ \
+  -H 'Content-Type: application/json' \
+  -d '{"Msg": "ding"}'
+
+curl -X POST localhost:8989/shutdown
+# Shutting down
+```
+
+## Unit Tests
 To run the tests locally and check coverage.
 
 ```shell

@@ -13,6 +13,11 @@ import (
 	"strings"
 )
 
+// serviceStatus represents the health of our little service
+type serviceStatus struct {
+	Status string
+}
+
 // serviceMsg defines the types of messages we pass around
 type serviceMsg struct {
 	Msg string
@@ -98,11 +103,6 @@ func getModes() []string {
 	return modes
 }
 
-// serviceStatus represents the health of our little service
-type serviceStatus struct {
-	Status string
-}
-
 // rootHandler deals with requests to `/`
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	if strings.EqualFold(r.Method, http.MethodGet) {
@@ -145,9 +145,39 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// postRoot handles GET requests to `/`
+// postRoot handles POST requests to `/`
 func postRoot(w http.ResponseWriter, r *http.Request) {
-
+	// Make sure we are dealing with JSON
+	contentType := r.Header[http.CanonicalHeaderKey("Content-Type")]
+	if len(contentType) == 0 || !strings.EqualFold(contentType[0], "application/json") {
+		log.Println("Error: request not JSON")
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	var msg serviceMsg
+	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+		log.Printf("Error: cannot decode JSON: %s", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if msg.Msg == "" {
+		log.Println("Error: request missing `msg` key")
+		http.Error(w, "No message", http.StatusBadRequest)
+		return
+	}
+	log.Printf("Received %+v", msg)
+	switch mode {
+	case "ping":
+		log.Println("Acting as ping")
+	case "pong":
+		log.Println("Acting as pong")
+	case "ding":
+		log.Println("Acting as ding")
+	case "dong":
+		log.Println("Acting as dong")
+	default:
+		log.Println("Mode is not set properly, doing nothing...")
+	}
 }
 
 // healthCheckHandler handles requests to `/health`
