@@ -50,7 +50,7 @@ The program accepts parameters via various environment variables.
 The program exports the following endpoints.
 
 - `GET /`: display the mode and various information about the service
-- `PUT /`: send a [JSON encoded message to the service](#message-format) 
+- `POST /`: send a [JSON encoded message to the service](#message-format) 
 - `GET /health`: JSON encoded health check
 - `POST /shutdown`: cleanly shutdown the service
 

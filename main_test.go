@@ -92,13 +92,40 @@ func TestShutdownMethod(t *testing.T) {
 		{method: http.MethodOptions, expect: http.StatusMethodNotAllowed},
 		{method: http.MethodTrace, expect: http.StatusMethodNotAllowed},
 	}
-	_, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.TODO())
 	shutdownFunc := shutdownHandler(cancel)
 	shutdown := http.HandlerFunc(shutdownFunc)
 	for _, test := range tests {
 		r := httptest.NewRequest(test.method, "/shutdown", nil)
 		w := httptest.NewRecorder()
 		shutdown(w, r)
+		if w.Code != test.expect {
+			t.Fatalf("Method %s expected %d got %d", test.method, test.expect, w.Code)
+		}
+	}
+}
+
+// TestRootMethod ensures that only GET and POST are accepted
+// Note, we don't test GET and POST explicitly because GET requires a context
+// and POST triggers a call to another service
+func TestRootMethod(t *testing.T) {
+	var tests = []struct {
+		method string
+		expect int
+	}{
+		// {method: http.MethodGet, expect: http.StatusOK},
+		{method: http.MethodHead, expect: http.StatusMethodNotAllowed},
+		// {method: http.MethodPost, expect: http.StatusOK},
+		{method: http.MethodPut, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodDelete, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodPatch, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodOptions, expect: http.StatusMethodNotAllowed},
+		{method: http.MethodTrace, expect: http.StatusMethodNotAllowed},
+	}
+	for _, test := range tests {
+		r := httptest.NewRequest(test.method, "/", nil)
+		w := httptest.NewRecorder()
+		rootHandler(w, r)
 		if w.Code != test.expect {
 			t.Fatalf("Method %s expected %d got %d", test.method, test.expect, w.Code)
 		}

@@ -107,6 +107,8 @@ type serviceStatus struct {
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	if strings.EqualFold(r.Method, http.MethodGet) {
 		getRoot(w, r)
+	} else if strings.EqualFold(r.Method, http.MethodPost) {
+		postRoot(w, r)
 	} else {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
@@ -141,6 +143,11 @@ func getRoot(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
 	}
+}
+
+// postRoot handles GET requests to `/`
+func postRoot(w http.ResponseWriter, r *http.Request) {
+
 }
 
 // healthCheckHandler handles requests to `/health`
