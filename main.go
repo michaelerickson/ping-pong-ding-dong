@@ -33,6 +33,11 @@ var pongSvc string
 var dingSvc string
 var dongSvc string
 
+// Every 4 pongs, the ping hits the ding :)
+const pongInterval = 4
+
+var pongCount int
+
 // main starts the service and listens for requests
 func main() {
 	// Log in UTC time with microsecond resolution
@@ -195,6 +200,16 @@ func postRoot(w http.ResponseWriter, r *http.Request) {
 	var msg string
 	switch mode {
 	case "ping":
+		// Every pongInterval, send a ping to ding
+		if msgRx.Msg == "pong" {
+			pongCount++
+		}
+		if 0 == (pongCount % pongInterval) {
+			log.Printf("ping -> ding at %s", dingSvc)
+			go func() {
+				_, _ = sendMsg("ping", dingSvc)
+			}()
+		}
 		log.Printf("ping -> pong at %s", pongSvc)
 		url = pongSvc
 		msg = "ping"
