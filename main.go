@@ -87,7 +87,7 @@ func main() {
 
 // validMode determines if the mode is one that we support
 func validMode(m string) bool {
-	validModes := getModes()
+	validModes := []string{"ping", "pong", "ding", "dong"}
 	for _, s := range validModes {
 		// Using EqualFold gives is a case-insensitive compare
 		if strings.EqualFold(m, s) {
@@ -95,12 +95,6 @@ func validMode(m string) bool {
 		}
 	}
 	return false
-}
-
-// getModes returns the valid values of PPDD_MODE
-func getModes() []string {
-	modes := []string{"ping", "pong", "ding", "dong"}
-	return modes
 }
 
 // rootHandler deals with requests to `/`
