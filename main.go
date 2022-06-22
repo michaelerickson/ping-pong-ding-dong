@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -65,6 +66,9 @@ func main() {
 	log.Printf("  pong: %s\n", pongSvc)
 	log.Printf("  ding: %s\n", dingSvc)
 	log.Printf("  dong: %s\n", dongSvc)
+
+	// See the random number generator
+	rand.Seed(time.Now().UnixNano())
 
 	m := http.NewServeMux()
 	s := http.Server{Addr: ":" + httpPort, Handler: m}
@@ -196,49 +200,51 @@ func postRoot(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("Received %+v", msgRx)
 
-	var url string
-	var msg string
 	switch mode {
 	case "ping":
-		// Every pongInterval, send a ping to ding
 		if msgRx.Msg == "pong" {
+			log.Printf("ping -> pong at %s", pongSvc)
+			go func() {
+				time.Sleep(getDelay())
+				_, _ = sendMsg("ping", pongSvc)
+			}()
 			pongCount++
 		}
+		// Every pongInterval, send a ping to ding
 		if 0 == (pongCount % pongInterval) {
 			log.Printf("ping -> ding at %s", dingSvc)
 			go func() {
+				time.Sleep(getDelay())
 				_, _ = sendMsg("ping", dingSvc)
 			}()
 		}
-		log.Printf("ping -> pong at %s", pongSvc)
-		url = pongSvc
-		msg = "ping"
 	case "pong":
 		log.Printf("pong -> ping at %s", pingSvc)
-		url = pingSvc
-		msg = "pong"
+		go func() {
+			time.Sleep(getDelay())
+			_, _ = sendMsg("pong", pingSvc)
+		}()
 	case "ding":
 		log.Printf("ding -> ping at %s", pingSvc)
-		log.Printf("ding -> dong at %s", dongSvc)
-		// Immediately respond to ping, defer the call to dong
 		go func() {
+			time.Sleep(getDelay())
 			_, _ = sendMsg("ding", pingSvc)
 		}()
-		url = dongSvc
-		msg = "ding"
+		log.Printf("ding -> dong at %s", dongSvc)
+		go func() {
+			time.Sleep(getDelay())
+			_, _ = sendMsg("ding", dongSvc)
+		}()
 	case "dong":
 		log.Printf("dong -> ping at %s", pingSvc)
-		url = pingSvc
-		msg = "dong"
+		go func() {
+			time.Sleep(getDelay())
+			_, _ = sendMsg("dong", pingSvc)
+		}()
 	default:
 		log.Println("Mode is not set properly, doing nothing...")
 		return
 	}
-	// Add a slight pause before sending
-	time.Sleep(2 * time.Second)
-	go func() {
-		_, _ = sendMsg(msg, url)
-	}()
 }
 
 // healthCheckHandler handles requests to `/health`
@@ -310,7 +316,7 @@ func resolveServices() {
 		dingName = "ding"
 	}
 	if dingPort == "" {
-		pongPort = "8080"
+		dingPort = "8080"
 	}
 	if dongName == "" {
 		dongName = "dong"
@@ -353,4 +359,9 @@ func sendMsg(msg string, url string) (*http.Response, error) {
 		Timeout: 30 * time.Second,
 	}
 	return client.Do(req)
+}
+
+// getDelay generates a somewhat random delay our sends can use
+func getDelay() time.Duration {
+	return time.Duration(2000+rand.Intn(1000)) * time.Millisecond
 }

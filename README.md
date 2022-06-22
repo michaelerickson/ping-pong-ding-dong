@@ -114,19 +114,43 @@ curl -X POST localhost:8989/shutdown
 
 ```shell
 # Terminal 1
-PPDD_MODE=ping \
-  HTTP_PORT=8080 \
+PPDD_MODE=dong \
+  HTTP_PORT=8083 \
   NAMESPACE=localhost \
   PING_PORT=8080 \
   PONG_PORT=8081 \
+  DING_PORT=8082 \
+  DONG_PORT=8083 \
   go run .
 
 # Terminal 2
+PPDD_MODE=ding \
+  HTTP_PORT=8082 \
+  NAMESPACE=localhost \
+  PING_PORT=8080 \
+  PONG_PORT=8081 \
+  DING_PORT=8082 \
+  DONG_PORT=8083 \
+  go run .
+
+# Terminal 3
 PPDD_MODE=pong \
   HTTP_PORT=8081 \
   NAMESPACE=localhost \
   PING_PORT=8080 \
   PONG_PORT=8081 \
+  DING_PORT=8082 \
+  DONG_PORT=8083 \
+  go run .
+
+# Terminal 4
+PPDD_MODE=ping \
+  HTTP_PORT=8080 \
+  NAMESPACE=localhost \
+  PING_PORT=8080 \
+  PONG_PORT=8081 \
+  DING_PORT=8082 \
+  DONG_PORT=8083 \
   go run .
 ```
 
