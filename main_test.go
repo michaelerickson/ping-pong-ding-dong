@@ -1,6 +1,13 @@
 package main
 
-import "testing"
+import (
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
 
 // TestValidModes checks that all valid modes are accepted
 func TestValidModes(t *testing.T) {
@@ -37,5 +44,34 @@ func TestInvalidModes(t *testing.T) {
 		if valid != test.expect {
 			t.Fatalf(`Mode %s = %t, wanted %t`, test.mode, valid, test.expect)
 		}
+	}
+}
+
+// TestHealthCheckHandler sees if the health check works
+func TestHealthCheckHandler(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+	healthCheckHandler(w, r)
+	result := w.Result()
+	defer result.Body.Close()
+	data, err := ioutil.ReadAll(result.Body)
+	if err != nil {
+		t.Errorf("Expected error to be nil - got %v", err)
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d - got %d", http.StatusOK, w.Code)
+	}
+	contentType := result.Header[http.CanonicalHeaderKey("Content-Type")]
+
+	if len(contentType) != 0 && !strings.EqualFold(contentType[0], "application/json") {
+		t.Fatalf("Expected JSON response, got: %s", contentType[0])
+	}
+	var status serviceStatus
+	err = json.Unmarshal(data, &status)
+	if err != nil {
+		t.Fatalf("Could not parse returned JSON: %s", err)
+	}
+	if !strings.EqualFold(status.Status, "OK") {
+		t.Fatalf("Expected status OK, got %s", status.Status)
 	}
 }
