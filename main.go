@@ -30,6 +30,8 @@ type serviceMsg struct {
 var mode string
 var pingSvc string
 var pongSvc string
+var dingSvc string
+var dongSvc string
 
 // main starts the service and listens for requests
 func main() {
@@ -56,6 +58,8 @@ func main() {
 	log.Printf("Services resolved to:\n")
 	log.Printf("  ping: %s\n", pingSvc)
 	log.Printf("  pong: %s\n", pongSvc)
+	log.Printf("  ding: %s\n", dingSvc)
+	log.Printf("  dong: %s\n", dongSvc)
 
 	m := http.NewServeMux()
 	s := http.Server{Addr: ":" + httpPort, Handler: m}
@@ -199,9 +203,18 @@ func postRoot(w http.ResponseWriter, r *http.Request) {
 		url = pingSvc
 		msg = "pong"
 	case "ding":
-		log.Println("Acting as ding")
+		log.Printf("ding -> ping at %s", pingSvc)
+		log.Printf("ding -> dong at %s", dongSvc)
+		// Immediately respond to ping, defer the call to dong
+		go func() {
+			_, _ = sendMsg("ding", pingSvc)
+		}()
+		url = dongSvc
+		msg = "ding"
 	case "dong":
-		log.Println("Acting as dong")
+		log.Printf("dong -> ping at %s", pingSvc)
+		url = pingSvc
+		msg = "dong"
 	default:
 		log.Println("Mode is not set properly, doing nothing...")
 		return
@@ -260,6 +273,10 @@ func resolveServices() {
 	pingPort := os.Getenv("PING_PORT")
 	pongName := os.Getenv("PONG_SVC")
 	pongPort := os.Getenv("PONG_PORT")
+	dingName := os.Getenv("DING_SVC")
+	dingPort := os.Getenv("DING_PORT")
+	dongName := os.Getenv("DONG_SVC")
+	dongPort := os.Getenv("DONG_PORT")
 
 	// Set defaults
 	if pingName == "" {
@@ -268,23 +285,39 @@ func resolveServices() {
 	if pingPort == "" {
 		pingPort = "8080"
 	}
-
 	if pongName == "" {
 		pongName = "pong"
 	}
 	if pongPort == "" {
 		pongPort = "8080"
 	}
-
+	if dingName == "" {
+		dingName = "ding"
+	}
+	if dingPort == "" {
+		pongPort = "8080"
+	}
+	if dongName == "" {
+		dongName = "dong"
+	}
+	if dongPort == "" {
+		dongPort = "8080"
+	}
 	if strings.EqualFold(namespace, "localhost") {
 		pingSvc = fmt.Sprintf("http://localhost:%s", pingPort)
 		pongSvc = fmt.Sprintf("http://localhost:%s", pongPort)
+		dingSvc = fmt.Sprintf("http://localhost:%s", dingPort)
+		dongSvc = fmt.Sprintf("http://localhost:%s", dongPort)
 		return
 	}
 	pingSvc = fmt.Sprintf("http://%s.%s.svc.cluster.local:%s",
 		pingName, namespace, pingPort)
 	pongSvc = fmt.Sprintf("http://%s.%s.svc.cluster.local:%s",
 		pongName, namespace, pongPort)
+	dingSvc = fmt.Sprintf("http://%s.%s.svc.cluster.local:%s",
+		dingName, namespace, dingPort)
+	dongSvc = fmt.Sprintf("http://%s.%s.svc.cluster.local:%s",
+		dongName, namespace, dongPort)
 }
 
 // sendMsg sends a message to a target service
