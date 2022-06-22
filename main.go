@@ -61,7 +61,7 @@ func main() {
 
 	// Add handlers to the mux
 	shutdown := http.HandlerFunc(shutdownFunc)
-	m.Handle("/shutdown", shutdown)
+	m.Handle("/shutdown", loggingMiddleware(shutdown))
 
 	// Launch the server in a go routing. This way the main thread can listen
 	// for the context being canceled and gracefully shut things down.
@@ -97,4 +97,12 @@ func validMode(m string) bool {
 func getModes() []string {
 	modes := []string{"ping", "pong", "ding", "dong"}
 	return modes
+}
+
+// loggingMiddleware logs all requests to the service
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s", r.Method, r.RequestURI)
+		next.ServeHTTP(w, r)
+	})
 }
