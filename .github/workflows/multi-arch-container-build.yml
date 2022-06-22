@@ -5,10 +5,10 @@ name: Build and publish multi-architecture container image
 # Run on pushes to main or tags in main
 on:
   push:
-#    branches:
-#      - main
-#    tags:
-#      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
   REGISTRY: ghcr.io
@@ -58,93 +58,93 @@ jobs:
         run: |
           go test ./...
 
-#  build:
-#    name: Build and push multi arch image
-#    # Buildah only works on Linux. GitHub's Ubuntu Environments 18.04 and newer
-#    # all come with buildah installed.
-#    runs-on: ubuntu-latest
-#    permissions:
-#      contents: read
-#      packages: write
-#
-#    steps:
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v2
-#
-#      - name: Checkout repository
-#        uses: actions/checkout@v3
-#
-#      - name: Compute short versions of SHASUM and repository name
-#        id: shorten
-#        run: |
-#          echo "::set-output name=sha::$(git rev-parse --short=10 HEAD)"
-#          echo "::set-output name=repo::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
-#
-#      - name: Print shortend names for debugging
-#        run: |
-#          echo "Short SHA ${{ steps.shorten.outputs.sha }}"
-#          echo "Short Repo ${{ steps.shorten.outputs.repo }}"
-#
-#      - name: Calculate RFC 3339 date
-#        id: date
-#        run: |
-#          echo "::set-output name=date::$(date --rfc-3339=seconds --utc)"
-#
-#      - name: Print calculated date
-#        run: |
-#          echo "Calculated date ${{ steps.date.outputs.date }}"
-#
-#      # If someone pushed a tag, we should add that to the container image.
-#      # This takes a little bit of work to sort out.
-#      - name: Calculate tag
-#        id: tag
-#        run: |
-#          if [ "${{ github.ref_type }}" = "tag" ]; then
-#            echo "::set-output name=tag::${{ github.ref_name }}"
-#          else
-#            echo "::set-output name=tag::"
-#          fi
-#
-#      - name: Print calculated tag
-#        run: |
-#          echo "Calculated tag ${{ steps.tag.outputs.tag }}"
-#
-#      - name: Build the container using buildah
-#        id: build-image
-#        uses: redhat-actions/buildah-build@v2
-#        with:
-#          image: ${{ steps.shorten.outputs.repo }}
-#          tags: ${{ steps.shorten.outputs.sha }} ${{ steps.tag.outputs.tag }}
-#          archs: amd64, arm64
-#          # Make true to build using OCI image format instead of Docker format
-#          oci: true
-#          containerfiles: |
-#            ./Dockerfile
-#          labels: |
-#            org.opencontainers.image.title=sample-task
-#            org.opencontainers.image.description=A sample task for playing with K8s
-#            org.opencontainers.image.licenses=MIT
-#            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-#            org.opencontainers.image.created=${{ steps.date.outputs.date }}
-#            org.opencontainers.image.version=${{ steps.shorten.outputs.sha }}
-#            org.opencontainers.image.vendor=${{ github.repository_owner }}
-#            org.opencontainers.image.base.name=gcr.io/distroless/static-debian11:latest
-#
-#      - name: Look at what was built
-#        run: |
-#          echo "Image: ${{ steps.build-image.outputs.image }}"
-#          echo "Tags: ${{ steps.build-image.outputs.tags }}"
-#          echo "Tagged Image: ${{ steps.build-image.outputs.image-with-tag }}"
-#
-#      - name: Push the image to ghcr.io
-#        id: push-to-ghcr
-#        uses: redhat-actions/push-to-registry@v2
-#        with:
-#          image: ${{ steps.build-image.outputs.image }}
-#          tags: ${{ steps.build-image.outputs.tags }} ${{ steps.tag.outputs.tag }}
-#          registry: ghcr.io/${{ github.repository_owner }}
-#          username: ${{ github.actor }}
-#          password: ${{ secrets.GITHUB_TOKEN }}
-#
-#      - name: Print image URL
-#        run: echo "Images pushed to ${{ steps.push-to-ghcr.outputs.registry-paths }}"
+  build:
+    name: Build and push multi arch image
+    # Buildah only works on Linux. GitHub's Ubuntu Environments 18.04 and newer
+    # all come with buildah installed.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Compute short versions of SHASUM and repository name
+        id: shorten
+        run: |
+          echo "::set-output name=sha::$(git rev-parse --short=10 HEAD)"
+          echo "::set-output name=repo::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
+
+      - name: Print shortend names for debugging
+        run: |
+          echo "Short SHA ${{ steps.shorten.outputs.sha }}"
+          echo "Short Repo ${{ steps.shorten.outputs.repo }}"
+
+      - name: Calculate RFC 3339 date
+        id: date
+        run: |
+          echo "::set-output name=date::$(date --rfc-3339=seconds --utc)"
+
+      - name: Print calculated date
+        run: |
+          echo "Calculated date ${{ steps.date.outputs.date }}"
+
+      # If someone pushed a tag, we should add that to the container image.
+      # This takes a little bit of work to sort out.
+      - name: Calculate tag
+        id: tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "::set-output name=tag::${{ github.ref_name }}"
+          else
+            echo "::set-output name=tag::"
+          fi
+
+      - name: Print calculated tag
+        run: |
+          echo "Calculated tag ${{ steps.tag.outputs.tag }}"
+
+      - name: Build the container using buildah
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ steps.shorten.outputs.repo }}
+          tags: ${{ steps.shorten.outputs.sha }} ${{ steps.tag.outputs.tag }}
+          archs: amd64, arm64
+          # Make true to build using OCI image format instead of Docker format
+          oci: true
+          containerfiles: |
+            ./Dockerfile
+          labels: |
+            org.opencontainers.image.title=ping-pong-ding-dong
+            org.opencontainers.image.description=Sample service(s) for playing with K8s
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.created=${{ steps.date.outputs.date }}
+            org.opencontainers.image.version=${{ steps.shorten.outputs.sha }}
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            org.opencontainers.image.base.name=gcr.io/distroless/static-debian11:latest
+
+      - name: Look at what was built
+        run: |
+          echo "Image: ${{ steps.build-image.outputs.image }}"
+          echo "Tags: ${{ steps.build-image.outputs.tags }}"
+          echo "Tagged Image: ${{ steps.build-image.outputs.image-with-tag }}"
+
+      - name: Push the image to ghcr.io
+        id: push-to-ghcr
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }} ${{ steps.tag.outputs.tag }}
+          registry: ghcr.io/${{ github.repository_owner }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print image URL
+        run: echo "Images pushed to ${{ steps.push-to-ghcr.outputs.registry-paths }}"
