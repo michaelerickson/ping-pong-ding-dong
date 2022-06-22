@@ -15,6 +15,8 @@ data:
   namespace: "default"
   ping_port: "8080"
   pong_port: "8080"
+  ding_port: "8080"
+  dong_port: "8080"
 
 ---
 # Ping Service
@@ -51,6 +53,40 @@ spec:
     app: pong
 
 ---
+# Ding Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ding
+  labels:
+    app: ding
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      nodePort: 30003
+      protocol: TCP
+  selector:
+    app: ding
+
+---
+# Dong Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: dong
+  labels:
+    app: dong
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      nodePort: 30004
+      protocol: TCP
+  selector:
+    app: dong
+
+---
 # Deployment for the ping service
 apiVersion: apps/v1
 kind: Deployment
@@ -76,7 +112,7 @@ spec:
     spec:
       containers:
         - name: ping-pong-ding-dong
-          image: "ghcr.io/michaelerickson/ping-pong-ding-dong:7e6c97f236"
+          image: "ghcr.io/michaelerickson/ping-pong-ding-dong:d65d4373da"
           ports:
             - containerPort: 8080
           env:
@@ -102,6 +138,16 @@ spec:
                 configMapKeyRef:
                   name: dev
                   key: pong_port
+            - name: DING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ding_port
+            - name: DONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: dong_port
 
       imagePullSecrets:
         - name: ghcr.io
@@ -132,7 +178,7 @@ spec:
     spec:
       containers:
         - name: ping-pong-ding-dong
-          image: "ghcr.io/michaelerickson/ping-pong-ding-dong:7e6c97f236"
+          image: "ghcr.io/michaelerickson/ping-pong-ding-dong:d65d4373da"
           ports:
             - containerPort: 8080
           env:
@@ -158,6 +204,148 @@ spec:
                 configMapKeyRef:
                   name: dev
                   key: pong_port
+            - name: DING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ding_port
+            - name: DONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: dong_port
+
+      imagePullSecrets:
+        - name: ghcr.io
+
+---
+# Deployment for the ding service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ding-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ding
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 300
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: ding
+    spec:
+      containers:
+        - name: ping-pong-ding-dong
+          image: "ghcr.io/michaelerickson/ping-pong-ding-dong:d65d4373da"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PPDD_MODE
+              value: ding
+            - name: HTTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: http_port
+            - name: NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: namespace
+            - name: PING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ping_port
+            - name: PONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: pong_port
+            - name: DING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ding_port
+            - name: DONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: dong_port
+
+      imagePullSecrets:
+        - name: ghcr.io
+
+---
+# Deployment for the dong service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dong-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dong
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 300
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: dong
+    spec:
+      containers:
+        - name: ping-pong-ding-dong
+          image: "ghcr.io/michaelerickson/ping-pong-ding-dong:d65d4373da"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PPDD_MODE
+              value: dong
+            - name: HTTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: http_port
+            - name: NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: namespace
+            - name: PING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ping_port
+            - name: PONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: pong_port
+            - name: DING_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: ding_port
+            - name: DONG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: dev
+                  key: dong_port
 
       imagePullSecrets:
         - name: ghcr.io
