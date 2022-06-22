@@ -9,6 +9,8 @@ func TestValidModes(t *testing.T) {
 		expect bool
 	}{
 		{mode: "ping", expect: true},
+		{mode: "Ping", expect: true},
+		{mode: "PING", expect: true},
 		{mode: "pong", expect: true},
 		{mode: "ding", expect: true},
 		{mode: "dong", expect: true},
