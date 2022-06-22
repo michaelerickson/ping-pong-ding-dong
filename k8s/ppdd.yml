@@ -13,8 +13,8 @@ metadata:
 data:
   http_port: "8080"
   namespace: "default"
-  ping_port: "30001"
-  pong_port: "30002"
+  ping_port: "8080"
+  pong_port: "8080"
 
 ---
 # Ping Service

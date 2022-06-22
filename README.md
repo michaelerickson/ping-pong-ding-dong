@@ -178,3 +178,36 @@ spec:
   imagePullSecrets:
     - name: ghcr.io   # <--- match name of secret you created above ---
 ```
+
+Set the cluster up via:
+
+```shell
+kubectl apply -f ppdd.yml
+
+# Delete things later via:
+kubectl delete -f ppdd.yml
+
+# Debug the network by running a container with various networking diagnostic
+# tools on it
+kubectl run -it dnsutils --image gcr.io/kubernetes-e2e-test-images/dnsutils:1.3
+nslookup pong
+# Server:		10.43.0.10
+# Address:	10.43.0.10#53
+# 
+# Name:	pong.default.svc.cluster.local
+# Address: 10.43.147.93
+
+wget http://pong.default.svc.cluster.local:8080/
+# Connecting to pong.default.svc.cluster.local:8080 (10.43.147.93:8080)
+# index.html           100% |**************************|  1165   0:00:00 ETA
+
+cat index.html
+# Hello from: 10.42.0.98:8080:
+#   mode: pong
+#   operating system: linux
+# ...
+
+# Remove the debug pod
+exit  # return to local terminal (ctl-d also works)
+kubectl delete pods/dnsutils
+```
