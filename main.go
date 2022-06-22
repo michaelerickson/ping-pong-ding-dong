@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 )
 
 // serviceStatus represents the health of our little service
@@ -155,30 +157,40 @@ func postRoot(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	var msg serviceMsg
-	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+	var msgRx serviceMsg
+	if err := json.NewDecoder(r.Body).Decode(&msgRx); err != nil {
 		log.Printf("Error: cannot decode JSON: %s", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if msg.Msg == "" {
+	if msgRx.Msg == "" {
 		log.Println("Error: request missing `msg` key")
 		http.Error(w, "No message", http.StatusBadRequest)
 		return
 	}
-	log.Printf("Received %+v", msg)
+	log.Printf("Received %+v", msgRx)
+
+	var url string
+	var msg string
 	switch mode {
 	case "ping":
-		log.Println("Acting as ping")
+		log.Printf("ping -> pong at %s", pongSvc)
+		url = pongSvc
+		msg = "ping"
 	case "pong":
-		log.Println("Acting as pong")
+		log.Printf("pong -> ping at %s", pingSvc)
+		url = pingSvc
+		msg = "pong"
 	case "ding":
 		log.Println("Acting as ding")
 	case "dong":
 		log.Println("Acting as dong")
 	default:
 		log.Println("Mode is not set properly, doing nothing...")
+		return
 	}
+
+	go sendMsg(msg, url)
 }
 
 // healthCheckHandler handles requests to `/health`
@@ -245,12 +257,38 @@ func resolveServices() {
 	}
 
 	if strings.EqualFold(namespace, "localhost") {
-		pingSvc = fmt.Sprintf("localhost:%s", pingPort)
-		pongSvc = fmt.Sprintf("localhost:%s", pongPort)
+		pingSvc = fmt.Sprintf("http://localhost:%s", pingPort)
+		pongSvc = fmt.Sprintf("http://localhost:%s", pongPort)
 		return
 	}
-	pingSvc = fmt.Sprintf("%s.%s.svc.cluster.local:%s",
+	pingSvc = fmt.Sprintf("http://%s.%s.svc.cluster.local:%s",
 		pingName, namespace, pingPort)
-	pongSvc = fmt.Sprintf("%s.%s.svc.cluster.local:%s",
+	pongSvc = fmt.Sprintf("http://%s.%s.svc.cluster.local:%s",
 		pongName, namespace, pongPort)
+}
+
+// sendMsg sends a message to a target service
+func sendMsg(msg string, url string) {
+	msgTx := serviceMsg{Msg: msg}
+	jsonBody, err := json.Marshal(msgTx)
+	if err != nil {
+		log.Printf("JSON error sending message: %s", err)
+	}
+	bodyReader := bytes.NewReader(jsonBody)
+	req, err := http.NewRequest(http.MethodPost, url, bodyReader)
+	if err != nil {
+		log.Printf("Error making request: %s", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// Add a slight pause before sending
+	time.Sleep(4 * time.Second)
+	_, err = client.Do(req)
+	if err != nil {
+		log.Printf("Error posting request: %s", err)
+	}
 }

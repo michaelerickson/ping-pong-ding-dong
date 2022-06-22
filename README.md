@@ -128,6 +128,12 @@ PPDD_MODE=pong \
   PING_PORT=8080 \
   PONG_PORT=8081 \
   go run .
+
+# Terminal 3
+# Kickstart ping
+curl -v -X POST localhost:8080/ \ 
+  -H 'Content-Type: application/json' \
+  -d '{"Msg": "foo"}'
 ```
 
 ## Unit Tests
