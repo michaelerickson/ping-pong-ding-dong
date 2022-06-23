@@ -1,0 +1,18 @@
+# The Dong service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dong
+  labels:
+      app: dong
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.networking.dongPort }}
+      nodePort: {{ .Values.nodePorts.dong }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: dong

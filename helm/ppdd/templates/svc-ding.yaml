@@ -1,0 +1,18 @@
+# The Ding service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ding
+  labels:
+      app: ding
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.networking.dingPort }}
+      nodePort: {{ .Values.nodePorts.ding }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: ding

@@ -1,0 +1,18 @@
+# The Pong service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pong
+  labels:
+      app: pong
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.networking.pongPort }}
+      nodePort: {{ .Values.nodePorts.pong }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: pong

@@ -1,0 +1,55 @@
+# Deployment for the ping service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping
+spec:
+  replicas: {{ required "Must define replicas" .Values.replicaCount.ping }}
+  selector:
+    matchLabels:
+      app: ping
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 300
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: ping
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}{{ .Values.image.image }}:{{ .Values.image.tag | default .Chart.AppVersion}}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.networking.pingPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          env:
+            - name: NAMESPACE
+              value: {{ .Values.namespace | quote }}
+            - name: PPDD_MODE
+              value: ping
+            - name: HTTP_PORT
+              value: {{ .Values.networking.pingPort | quote }}
+            - name: PING_PORT
+              value: {{ .Values.networking.pingPort | quote }}
+            - name: PONG_PORT
+              value: {{ .Values.networking.pongPort | quote }}
+            - name: DING_PORT
+              value: {{ .Values.networking.dingPort | quote }}
+            - name: DONG_PORT
+              value: {{ .Values.networking.dongPort | quote }}
+
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
