@@ -203,7 +203,18 @@ spec:
     - name: ghcr.io   # <--- match name of secret you created above ---
 ```
 
-Set the cluster up via:
+Set the cluster up via helm or the base K8s files:
+
+Helm
+```shell
+cd helm
+helm install ppdd ./ppdd
+
+helm list
+
+```
+
+Base K8s files.
 
 ```shell
 kubectl apply -f ppdd.yml
