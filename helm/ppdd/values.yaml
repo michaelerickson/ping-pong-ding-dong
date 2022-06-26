@@ -12,6 +12,10 @@ image:
   image: ping-pong-ding-dong
   tag: d65d4373da
   pullPolicy: IfNotPresent
+  tagPing: d65d4373da
+  tagPong: d65d4373da
+  tagDing: d65d4373da
+  tagDong: d65d4373da
 
 imagePullSecrets:
     - name: ghcr.io
