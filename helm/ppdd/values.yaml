@@ -1,21 +1,21 @@
 # Default values for ppdd.
-namespace: default
+namespace: ppdd
 
 replicaCount:
   ping: 1
-  pong: 2
-  ding: 2
-  dong: 3
+  pong: 1
+  ding: 1
+  dong: 1
 
 image:
   repository: ghcr.io/michaelerickson/
   image: ping-pong-ding-dong
-  tag: d65d4373da
+  tag: 5148c3d2c3
   pullPolicy: IfNotPresent
-  tagPing: d65d4373da
-  tagPong: d65d4373da
-  tagDing: d65d4373da
-  tagDong: d65d4373da
+  tagPing: 5148c3d2c3
+  tagPong: 5148c3d2c3
+  tagDing: 5148c3d2c3
+  tagDong: 5148c3d2c3
 
 imagePullSecrets:
     - name: ghcr.io

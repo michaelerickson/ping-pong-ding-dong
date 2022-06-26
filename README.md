@@ -208,7 +208,11 @@ Set the cluster up via helm or the base K8s files:
 Helm
 ```shell
 cd helm
-helm install ppdd ./ppdd
+
+# Install everything into the `ppdd` namespace, creating it if necessary
+#  Test first
+helm install ppdd ./helm/ppdd --namespace=ppdd --create-namespace --dry-run
+helm install ppdd ./helm/ppdd --namespace=ppdd --create-namespace
 
 helm list
 
