@@ -10,12 +10,12 @@ replicaCount:
 image:
   repository: ghcr.io/michaelerickson/
   image: ping-pong-ding-dong
-  tag: 5148c3d2c3
+  tag: "861166e201"
   pullPolicy: IfNotPresent
-  tagPing: 5148c3d2c3
-  tagPong: 5148c3d2c3
-  tagDing: 5148c3d2c3
-  tagDong: 5148c3d2c3
+  tagPing: "861166e201"
+  tagPong: "861166e201"
+  tagDing: "861166e201"
+  tagDong: "861166e201"
 
 imagePullSecrets:
     - name: ghcr.io
