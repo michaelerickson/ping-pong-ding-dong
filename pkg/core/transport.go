@@ -63,10 +63,17 @@ type Request struct {
 // PpddTransport defines the interface a ping-pong-ding-dong service expects
 // of a transport plugin.
 type PpddTransport interface {
-	// ListenAndServ receives Request types on the tx channel and places
-	// received Message types on the rx channel. If an error occurs, the
-	// function will stop immediately and return an error.
-	ListenAndServ(ctx context.Context, rx chan Message, tx chan Request) error
+	// Init stores the channels the transport provider uses to send and receive
+	// messages on, as well as the context it should monitor for graceful exit.
+	// The transport should receive Message types and place them on the rx
+	// channel for the service to process. The service will place Request types
+	// on the tx channel for the transport to send.
+	Init(rx chan Message, tx chan Request, version string) error
+
+	// ListenAndServe processes received Message and Request types. It launches
+	// its own go routines and will monitor the context passed to Init to shut
+	// down.
+	ListenAndServe(ctx context.Context) error
 }
 
 // NewMessage is useful for creating mocks and testing

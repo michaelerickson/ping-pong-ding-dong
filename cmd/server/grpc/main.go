@@ -3,47 +3,69 @@ package main
 import (
 	"context"
 	"github.com/michaelerickson/ping-pong-ding-dong/pkg/core"
+	"github.com/michaelerickson/ping-pong-ding-dong/pkg/transport/grpc"
 	"log"
+	"os"
+	"os/signal"
 )
 
-const apiVersion = "v1"
+//type foo struct{}
+//
+//func (*foo) ListenAndServ(ctx context.Context, rx chan core.Message, tx chan core.Request) error {
+//	// Prime the pump with an unsolicited response from the pong service
+//	go func() { rx <- core.NewMessage(apiVersion, core.Pong) }()
+//
+//	// Basically a loopback interface for a Ping service.
+//	go func() {
+//		for {
+//			select {
+//			case <-ctx.Done():
+//				log.Print("context canceled, exiting send loop")
+//				return
+//			case req := <-tx:
+//				log.Printf("sending: %s -> %s", req.Msg.Msg.String(), req.Endpoint.String())
+//				switch req.Endpoint {
+//				case core.Pong:
+//					go func() { rx <- core.NewMessage(apiVersion, core.Pong) }()
+//				case core.Ding:
+//					go func() { rx <- core.NewMessage(apiVersion, core.Ding) }()
+//					go func() { rx <- core.NewMessage(apiVersion, core.Dong) }()
+//				}
+//			}
+//		}
+//	}()
+//
+//	return nil
+//}
 
-type foo struct{}
+func main() {
+	const apiVersion = "v1"
 
-func (*foo) ListenAndServ(ctx context.Context, rx chan core.Message, tx chan core.Request) error {
-	// Prime the pump with an unsolicited response from the pong service
-	go func() { rx <- core.NewMessage(apiVersion, core.Pong) }()
+	// Log in UTC time with microsecond resolution
+	log.SetFlags(log.LUTC | log.Ldate | log.Ltime | log.Lmicroseconds)
+	// Instantiate a transport provider
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Basically a loopback interface for a Ping service.
+	// Graceful shutdown on control-c or outer context being canceled.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
-				log.Print("context canceled, exiting send loop")
+			case <-c:
+				log.Println("received control-c, shutting down")
+				cancel()
 				return
-			case req := <-tx:
-				log.Printf("sending: %s -> %s", req.Msg.Msg.String(), req.Endpoint.String())
-				switch req.Endpoint {
-				case core.Pong:
-					go func() { rx <- core.NewMessage(apiVersion, core.Pong) }()
-				case core.Ding:
-					go func() { rx <- core.NewMessage(apiVersion, core.Ding) }()
-					go func() { rx <- core.NewMessage(apiVersion, core.Dong) }()
-				}
 			}
 		}
 	}()
 
-	return nil
-}
+	var transport grpc.PpddTransport
 
-func main() {
-	// Log in UTC time with microsecond resolution
-	log.SetFlags(log.LUTC | log.Ldate | log.Ltime | log.Lmicroseconds)
-	var myFoo foo
 	mode := core.Ping
 
-	err := core.RunService(mode, &myFoo)
+	err := core.RunService(ctx, mode, apiVersion, &transport)
 	if err != nil {
 		log.Fatalf("Error running service: %s", err)
 	}

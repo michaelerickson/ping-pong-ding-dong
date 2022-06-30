@@ -21,34 +21,41 @@ var pongCount int
 
 // RunService takes as PpddTransport and runs continuously until it is stopped.
 // The behavior of the service is dependent on the mode it is started with.
-func RunService(mode MessageType, transport PpddTransport) error {
+func RunService(ctx context.Context, mode MessageType, version string, transport PpddTransport) error {
 	if mode == Undefined {
 		return fmt.Errorf("refusing to run in %s mode", mode.String())
 	}
-	// Establish a context so we can shut things down cleanly
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	// Create the channels our transport plugin will send/receive on
+	if version != apiVersion {
+		return fmt.Errorf("unsupported API version, this server supports %s", apiVersion)
+	}
+	// Create the channels our transport plugin will send/receive on and
+	// initialize the transport
 	rx := make(chan Message)
 	tx := make(chan Request)
+	if err := transport.Init(rx, tx, version); err != nil {
+		return err
+	}
 
-	if err := transport.ListenAndServ(ctx, rx, tx); err != nil {
+	// Monitor for received messages or global shutdown
+	go func() {
+		log.Printf("PPDD service started in mode: %s", mode.String())
+		for {
+			select {
+			case msg := <-rx:
+				log.Printf("received %s", msg.Msg.String())
+				handleMessage(mode, msg, tx)
+			case <-ctx.Done():
+				log.Println("context canceled, ending receive loop")
+				return
+			}
+		}
+	}()
+
+	if err := transport.ListenAndServe(ctx); err != nil {
 		return fmt.Errorf("transport ListenAndServe() failed: %s", err)
 	}
-
-	log.Printf("PPDD service started in mode: %s", mode.String())
-	// count := 0
-	for loop := true; loop; {
-		select {
-		case msg := <-rx:
-			log.Printf("received %s", msg.Msg.String())
-			handleMessage(mode, msg, tx)
-		}
-	}
-
 	log.Println("Service ending.")
-	time.Sleep(10 * time.Second)
 	return nil
 }
 
