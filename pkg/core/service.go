@@ -10,10 +10,13 @@ import (
 	"time"
 )
 
-// Every 4 pongs, the ping hits the ding :)
-const pongInterval = 4
+// The version of the api this server supports.
+const apiVersion = "v1"
 
-// pongCount allows us to send a ping to ding every fourth pong
+// dingInterval defines the interval between when a ping server sends to ding.
+const dingInterval = 4
+
+// pongCount allows us to send a ping to ding every dingInterval.
 var pongCount int
 
 // RunService takes as PpddTransport and runs continuously until it is stopped.
@@ -35,22 +38,12 @@ func RunService(mode MessageType, transport PpddTransport) error {
 	}
 
 	log.Printf("PPDD service started in mode: %s", mode.String())
-	count := 0
+	// count := 0
 	for loop := true; loop; {
 		select {
 		case msg := <-rx:
-			count++
-			log.Printf("Received %s", msg.Msg.String())
-			var req Request
-			req.Msg.Meta.ApiVersion = "v1"
-			req.Msg.Meta.SentAt = time.Now().UTC()
-			req.Msg.Msg = msg.Msg
-			req.Endpoint = msg.Msg
-			tx <- req
-			if count == 3 {
-				cancel()
-				loop = false
-			}
+			log.Printf("received %s", msg.Msg.String())
+			handleMessage(mode, msg, tx)
 		}
 	}
 
@@ -61,15 +54,29 @@ func RunService(mode MessageType, transport PpddTransport) error {
 
 // The handleMessage function dispatches a response based on the mode the
 // service is running in and the message it received.
-//func handleMessage(mode MessageType, msg MessageType, transport PpddTransport) error {
-//	switch mode {
-//	case Ping:
-//		switch msg {
-//		case Pong:
-//			pongCount++
-//			if 0 == (pongCount % pongInterval) {
-//				go transport.Send(Ding, Ding)
-//			}
-//		}
-//	}
-//}
+func handleMessage(mode MessageType, msg Message, tx chan Request) {
+	time.Sleep(3 * time.Second)
+	switch mode {
+	case Ping:
+		switch msg.Msg {
+		case Pong:
+			// After dingInterval number of Pongs, we message the ding service
+			pongCount++
+			if 0 == (pongCount % dingInterval) {
+				go func() { tx <- NewRequest(apiVersion, mode, Ding) }()
+			}
+			// Respond back to pong, ignore all others
+			go func() { tx <- NewRequest(apiVersion, mode, Pong) }()
+		}
+	case Pong:
+		// The Pong service always just responds back to the Ping service
+		go func() { tx <- NewRequest(apiVersion, mode, Ping) }()
+	case Ding:
+		// The Ding service responds to Ping, and also messages Dong
+		go func() { tx <- NewRequest(apiVersion, mode, Ping) }()
+		go func() { tx <- NewRequest(apiVersion, mode, Dong) }()
+	case Dong:
+		// The Dong service just messages Ping
+		go func() { tx <- NewRequest(apiVersion, mode, Ping) }()
+	}
+}

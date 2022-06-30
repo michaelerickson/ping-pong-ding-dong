@@ -68,3 +68,30 @@ type PpddTransport interface {
 	// function will stop immediately and return an error.
 	ListenAndServ(ctx context.Context, rx chan Message, tx chan Request) error
 }
+
+// NewMessage is useful for creating mocks and testing
+func NewMessage(apiVersion string, msg MessageType) Message {
+	req := Message{
+		Meta: struct {
+			ApiVersion string
+			SentAt     time.Time
+		}{ApiVersion: apiVersion, SentAt: time.Now().UTC()},
+		Msg: msg,
+	}
+	return req
+}
+
+// NewRequest creates a new request to another service.
+func NewRequest(apiVersion string, msg MessageType, endpoint MessageType) Request {
+	req := Request{
+		Msg: Message{
+			Meta: struct {
+				ApiVersion string
+				SentAt     time.Time
+			}{ApiVersion: apiVersion, SentAt: time.Now().UTC()},
+			Msg: msg,
+		},
+		Endpoint: endpoint,
+	}
+	return req
+}
