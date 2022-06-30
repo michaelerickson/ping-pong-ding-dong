@@ -1,0 +1,40 @@
+// Protocol buffers definition of our Ping Pong, Ding Dong service.
+//
+syntax = "proto3";
+package v1;
+option go_package = "proto/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// MessageTypes defines the set of messages passed around the system.
+enum MessageType {
+  Undefined = 0;
+  Ping = 1;
+  Pong = 2;
+  Ding = 3;
+  Dong = 4;
+}
+
+// Meta encodes meta-data about our requests and responses.
+message Meta {
+  string api_version = 1;
+  google.protobuf.Timestamp sent_at = 2;
+}
+
+// Message defines a message sent to a service.
+message Message {
+  Meta meta = 1;
+  MessageType message = 2;
+}
+
+// Response messages are returned from the service
+message Response {
+  Meta meta = 1;
+}
+
+// PpddService declares the RPC service that our code will implement.
+service PpddService {
+  // Trigger sends a message to the service, which "triggers" it to send a
+  // follow on message to another service.
+  rpc Trigger(Message) returns (Response);
+}
