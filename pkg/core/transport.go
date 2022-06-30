@@ -68,12 +68,12 @@ type PpddTransport interface {
 	// The transport should receive Message types and place them on the rx
 	// channel for the service to process. The service will place Request types
 	// on the tx channel for the transport to send.
-	Init(rx chan Message, tx chan Request, version string) error
+	Init(rx chan Message, tx chan Request, cfg Config) error
 
 	// ListenAndServe processes received Message and Request types. It launches
 	// its own go routines and will monitor the context passed to Init to shut
 	// down.
-	ListenAndServe(ctx context.Context) error
+	ListenAndServe(ctx context.Context, cfg Config) error
 }
 
 // NewMessage is useful for creating mocks and testing

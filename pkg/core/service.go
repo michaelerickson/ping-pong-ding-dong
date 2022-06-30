@@ -21,30 +21,30 @@ var pongCount int
 
 // RunService takes as PpddTransport and runs continuously until it is stopped.
 // The behavior of the service is dependent on the mode it is started with.
-func RunService(ctx context.Context, mode MessageType, version string, transport PpddTransport) error {
-	if mode == Undefined {
-		return fmt.Errorf("refusing to run in %s mode", mode.String())
+func RunService(ctx context.Context, cfg Config, transport PpddTransport) error {
+	if cfg.Mode == Undefined {
+		return fmt.Errorf("refusing to run in %s mode", cfg.Mode)
 	}
 
-	if version != apiVersion {
+	if cfg.ApiVersion != apiVersion {
 		return fmt.Errorf("unsupported API version, this server supports %s", apiVersion)
 	}
 	// Create the channels our transport plugin will send/receive on and
 	// initialize the transport
 	rx := make(chan Message)
 	tx := make(chan Request)
-	if err := transport.Init(rx, tx, version); err != nil {
+	if err := transport.Init(rx, tx, cfg); err != nil {
 		return err
 	}
 
 	// Monitor for received messages or global shutdown
 	go func() {
-		log.Printf("PPDD service started in mode: %s", mode.String())
+		log.Printf("PPDD service started in mode: %s", cfg.Mode)
 		for {
 			select {
 			case msg := <-rx:
 				log.Printf("received %s", msg.Msg.String())
-				handleMessage(mode, msg, tx)
+				handleMessage(cfg.Mode, msg, tx)
 			case <-ctx.Done():
 				log.Println("context canceled, ending receive loop")
 				return
@@ -52,7 +52,10 @@ func RunService(ctx context.Context, mode MessageType, version string, transport
 		}
 	}()
 
-	if err := transport.ListenAndServe(ctx); err != nil {
+	// If we are in ping mode, bootstrap some calls to Pong
+	go bootstrap(tx)
+
+	if err := transport.ListenAndServe(ctx, cfg); err != nil {
 		return fmt.Errorf("transport ListenAndServe() failed: %s", err)
 	}
 	log.Println("Service ending.")
@@ -85,5 +88,17 @@ func handleMessage(mode MessageType, msg Message, tx chan Request) {
 	case Dong:
 		// The Dong service just messages Ping
 		go func() { tx <- NewRequest(apiVersion, mode, Ping) }()
+	}
+}
+
+// bootstrap runs if the service starts in Mode ping. It runs until it sees
+// a response from a pong service.
+func bootstrap(tx chan Request) {
+	count := 0
+	for pongCount == 0 {
+		time.Sleep(3 * time.Second)
+		log.Printf("bootstrapping: %d", count)
+		go func() { tx <- NewRequest(apiVersion, Ping, Pong) }()
+		count++
 	}
 }

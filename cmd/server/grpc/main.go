@@ -43,7 +43,14 @@ func main() {
 
 	// Log in UTC time with microsecond resolution
 	log.SetFlags(log.LUTC | log.Ldate | log.Ltime | log.Lmicroseconds)
-	// Instantiate a transport provider
+
+	var cfg core.Config
+	cfg.Init()
+	if cfg.ApiVersion != apiVersion {
+		log.Fatalf("api version mismatch: %s != %s", apiVersion, cfg.ApiVersion)
+	}
+
+	// Establish an outer context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -61,11 +68,10 @@ func main() {
 		}
 	}()
 
+	// Configure a gRPC transport provider.
 	var transport grpc.PpddTransport
 
-	mode := core.Ping
-
-	err := core.RunService(ctx, mode, apiVersion, &transport)
+	err := core.RunService(ctx, cfg, &transport)
 	if err != nil {
 		log.Fatalf("Error running service: %s", err)
 	}

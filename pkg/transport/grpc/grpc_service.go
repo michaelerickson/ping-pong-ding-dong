@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net"
 	"time"
@@ -26,10 +27,10 @@ type PpddTransport struct {
 }
 
 // Init configures the transport provider
-func (s *PpddTransport) Init(rx chan core.Message, tx chan core.Request, version string) error {
-	if version != apiVersion {
+func (s *PpddTransport) Init(rx chan core.Message, tx chan core.Request, cfg core.Config) error {
+	if cfg.ApiVersion != apiVersion {
 		return fmt.Errorf("API version error: transport support %s, wanted %s",
-			apiVersion, version)
+			apiVersion, cfg.ApiVersion)
 	}
 	s.rx = rx
 	s.tx = tx
@@ -38,7 +39,7 @@ func (s *PpddTransport) Init(rx chan core.Message, tx chan core.Request, version
 
 // ListenAndServe is part of the core.PpddTransport interface and is called
 // by the server.
-func (s *PpddTransport) ListenAndServe(ctx context.Context) error {
+func (s *PpddTransport) ListenAndServe(ctx context.Context, cfg core.Config) error {
 	// Launch a go routine to handle outbound requests from our service to
 	// other services.
 	go func() {
@@ -49,11 +50,12 @@ func (s *PpddTransport) ListenAndServe(ctx context.Context) error {
 				return
 			case req := <-s.tx:
 				log.Printf("sending %#v", req)
+				go send(req, cfg)
 			}
 		}
 	}()
 
-	listen, err := net.Listen("tcp", ":50051")
+	listen, err := net.Listen("tcp", "localhost:"+cfg.ServicePort)
 	if err != nil {
 		return err
 	}
@@ -77,7 +79,7 @@ func (s *PpddTransport) ListenAndServe(ctx context.Context) error {
 }
 
 // Trigger is the gRPC endpoint where the service receives messages.
-func (s *PpddTransport) Trigger(_ context.Context, msg *pb.Message) (res *pb.Response, err error) {
+func (s *PpddTransport) Trigger(_ context.Context, msg *pb.Message) (*pb.Response, error) {
 	log.Printf("rx: meta %s : msg %s", msg.GetMeta(), msg.GetMessage())
 
 	// Unpack and receive the message
@@ -89,8 +91,10 @@ func (s *PpddTransport) Trigger(_ context.Context, msg *pb.Message) (res *pb.Res
 		ApiVersion: apiVersion,
 		SentAt:     sentAt,
 	}
-	res.Meta = &meta
-	return res, nil
+	var res = pb.Response{
+		Meta: &meta,
+	}
+	return &res, nil
 }
 
 // rxMessage converts the protocol buffer into the core data structure and
@@ -101,4 +105,57 @@ func (s *PpddTransport) rxMessage(msg *pb.Message) {
 	coreMsg.Meta.SentAt = msg.Meta.GetSentAt().AsTime()
 	coreMsg.Msg = core.MessageType(msg.GetMessage())
 	s.rx <- coreMsg
+}
+
+// send is responsible for sending a gRPC request to another service
+func send(req core.Request, cfg core.Config) {
+	// Convert internal representation to gRPC
+	meta := pb.Meta{
+		ApiVersion: apiVersion,
+		SentAt:     timestamppb.New(time.Now().UTC()),
+	}
+	msg := pb.Message{
+		Meta:    &meta,
+		Message: pb.MessageType(req.Msg.Msg),
+	}
+
+	var endpoint string
+	switch req.Endpoint {
+	case core.Ping:
+		endpoint = cfg.PingSvc
+	case core.Pong:
+		endpoint = cfg.PongSvc
+	case core.Ding:
+		endpoint = cfg.DingSvc
+	case core.Dong:
+		endpoint = cfg.DongSvc
+	default:
+		log.Printf("error attempting to send to endpoint %s", req.Endpoint)
+		return
+	}
+	// Create a connection to the server
+	credentials := insecure.NewCredentials()
+	conn, err := grpc.Dial(endpoint, grpc.WithTransportCredentials(credentials))
+	if err != nil {
+		log.Printf("error dialing: %s", err)
+		return
+	}
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+			log.Printf("error closing connection: %s", err)
+		}
+	}(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client := pb.NewPpddServiceClient(conn)
+	res, err := client.Trigger(ctx, &msg)
+	if err != nil {
+		log.Printf("error calling service: %s", err)
+		return
+	}
+	log.Printf("got response %#v", res)
+	return
 }
